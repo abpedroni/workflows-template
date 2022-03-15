@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: 
+      - master
+    paths-ignore: 
+      - '**.md'
+      - 'docs/**'
+      - 'db/**'
+      - 'pipelines/**'
+      
+  workflow_dispatch:
+    inputs:
+      config_deploy:
+        default: release
+        type: choice
+        options:
+        - release
+        - debug 
+        required: true
+        description: A configuração a ser usada para compilar o projeto."
+
+      versionTag:
+        description: 'Version Tag (semantic version)'
+        default: '1.0.0'
+        required: false
+
+env:
+  #OUTPUT_PATH: ${{ github.workspace }}/.output
+  NUGET_SOURCE: ${{ secrets.NUGET_SOURCE }}
+  DOTNET_VERSION: '6.0.x'
+  BUILD_NUMBER: ${{ github.event.inputs.versionTag }}
+  CONFIG_DEPLOY: ${{ github.event.inputs.config_deploy }}
+
+jobs:
+  build-and-test:
+    name: Build 
+    runs-on: ubuntu-latest
+    steps:
+    - name: Print variables
+      run: |
+        echo "github.event.action >> ${{ github.event.action}}"
+        echo "github.actor >> ${{ github.actor}}"
+        echo "github.event_name >> ${{ github.event_name}}"
+        echo "github.ref >> ${{ github.ref}}"
+    - uses: actions/checkout@v2
+
+    - name: Define build number if empty
+      run: echo "BUILD_NUMBER=1.0.${{ github.run_number }}" >> $GITHUB_ENV
+      if: ${{ env.BUILD_NUMBER == '' }}
+
+    - name: Define configuration deploy if empty
+      run: echo "CONFIG_DEPLOY=release" >> $GITHUB_ENV
+      if: ${{ env.CONFIG_DEPLOY == '' }}
+
+    - name: Setup .NET v${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore --configfile NuGet.Config
+      
+    # - name: Bump version and push tag
+    #   id: tag_version
+    #   uses: mathieudutour/github-tag-action@v6.0
+    #   with:
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build 
+      run: dotnet build --no-restore -c ${{ env.CONFIG_DEPLOY }}
+        
+    - name: Test
+      run: dotnet test --no-restore --no-build -c ${{ env.CONFIG_DEPLOY }} --verbosity normal
+
+    # - name: Pack
+    #   run: dotnet pack --no-build -c ${{ env.CONFIG_DEPLOY }} -p:VersionSuffix=${{ env.BUILD_NUMBER }} /nr:false -o .
+    
+    #- name: Push 
+    #  run: dotnet nuget push *.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source ${{ env.NUGET_SOURCE }} --skip-duplicate    
+
+    # - name: Create Release
+    #   if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    #   uses: actions/create-release@v1
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.github_token }}
+    #   with:
+    #     tag_name: "${{ steps.tag_version.outputs.new_tag }}"
+    #     release_name: "${{ steps.tag_version.outputs.new_tag }}"
+    #     draft: true
+    #     prerelease: true
+        

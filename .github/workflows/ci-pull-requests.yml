@@ -1,0 +1,63 @@
+name: CI Pull Request
+
+on:
+  pull_request:
+    types: 
+      - opened
+      #- edited
+      - synchronize
+      - ready_for_review
+      - review_requested
+      - review_request_removed
+    # branches:    
+    #   - 'docs/**'
+    #   - 'feat/**'
+    #   - 'feature/**'
+    # branches: 
+    #   - feat/*
+    #   - feature/*
+    #   - fix/*
+    #   - hotfix/*
+    #   - docs/*
+    #   - refactor/*
+    #   - perf/*
+    #   - test/*
+    #   - ci/*
+    #   - chore/*
+    #   - revert/*
+
+env:
+  NUGET_SOURCE: ${{ secrets.NUGET_SOURCE }}
+  DOTNET_VERSION: '6.0.x'
+  BUILD_NUMBER: ${{ github.event.inputs.versionTag }}
+  CONFIG_DEPLOY: Debug
+
+jobs:
+  build-and-test:
+    name: Build 
+    runs-on: ubuntu-latest
+    steps:
+    - name: Print variables
+      run: |
+        echo "github.event.action >> ${{ github.event.action}}"
+        echo "github.actor >> ${{ github.actor}}"
+        echo "github.event_name >> ${{ github.event_name}}"
+        echo "github.ref >> ${{ github.ref}}"
+
+    - uses: actions/checkout@v2
+
+    - name: Setup .NET v${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore --configfile NuGet.Config
+      
+    - name: Build 
+      run: dotnet build --no-restore -c ${{ env.CONFIG_DEPLOY }}
+        
+    - name: Test
+      run: dotnet test --no-restore --no-build --verbosity normal
+
+
