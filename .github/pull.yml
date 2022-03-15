@@ -1,7 +1,9 @@
 version: "1"
 rules:
   - base: master
-    upstream: abpedroni:master    # change `abpedroni` to the owner of upstream repo
+    upstream: abpedroni:master   
     mergeMethod: hardreset
-label: ":arrow_heading_down: pull"  # Optional
-conflictLabel: "merge-conflict"     # Optional, on merge conflict assign a custom label, Default: merge-conflict
+label: ":arrow_heading_down: pull"  
+conflictLabel: "merge-conflict"     
+
+#test;
